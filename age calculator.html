@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Futuristic Age Calculator with Water Ripple</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body, html {
+      margin: 0; padding: 0;
+      height: 100%;
+      background: #020217;
+      overflow: hidden;
+      font-family: 'Orbitron', monospace, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #a2d1ff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #background-canvas, #ripple-canvas {
+      position: fixed;
+      top:0; left:0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+      user-select: none;
+    }
+    #ripple-canvas {
+      z-index: 2;
+    }
+
+    .glass-container {
+      position: relative;
+      z-index: 5;
+      width: 420px;
+      padding: 48px 40px 56px;
+      border-radius: 32px;
+      background: rgba(10, 20, 60, 0.35);
+      box-shadow:
+        0 0 30px 3px rgba(40, 140, 255, 0.35),
+        inset 0 0 40px rgba(80, 180, 255, 0.3);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1.8px solid rgba(60, 140, 255, 0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      color: #a2d1ff;
+      box-sizing: border-box;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      user-select: text;
+    }
+
+    h1 {
+      margin: 0 0 28px 0;
+      font-size: 2.8rem;
+      color: #69aaff;
+      text-shadow: 0 0 12px #4a90ffaa;
+      font-weight: 700;
+    }
+
+    label {
+      display: block;
+      text-align: left;
+      margin-bottom: 6px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #a9cfffcc;
+      user-select: text;
+      text-shadow: 0 0 4px #4a80ffcc;
+      width: 100%;
+    }
+    input[type="date"], input[type="time"] {
+      width: 100%;
+      padding: 14px 18px;
+      font-size: 1.1rem;
+      font-weight: 500;
+      border-radius: 14px;
+      border: 1.8px solid rgba(80, 150, 255, 0.35);
+      background: rgba(20, 35, 80, 0.45);
+      color: #b2d1ff;
+      box-shadow: inset 0 0 14px rgba(60, 140, 255, 0.45);
+      outline-offset: 3px;
+      transition: border-color 0.3s ease, background-color 0.3s ease;
+      user-select: text;
+      margin-bottom: 22px;
+      box-sizing: border-box;
+    }
+    input[type="date"]:focus,
+    input[type="time"]:focus {
+      border-color: #79a5ffcc;
+      background: rgba(20, 40, 90, 0.75);
+      outline: none;
+      box-shadow:
+        0 0 18px 3px #649cffcc,
+        inset 0 0 18px 3px #5598ffcc;
+      color: #d0e8ff;
+    }
+    button.calc-btn {
+      margin-top: 8px;
+      width: 100%;
+      padding: 16px 0;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #d0e8ff;
+      background: linear-gradient(145deg, #3a6cff, #65a1ff);
+      border: none;
+      border-radius: 20px;
+      box-shadow:
+        0 0 20px 4px #3a6cffcc,
+        inset 0 0 25px 6px #66a4ffcc;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.4s ease, box-shadow 0.4s ease;
+      text-shadow: 0 0 8px #5d9bffcc;
+    }
+    button.calc-btn:hover,
+    button.calc-btn:focus {
+      background: linear-gradient(145deg, #66a1ff, #3a6cff);
+      box-shadow:
+        0 0 28px 6px #5599ffdd,
+        inset 0 0 30px 8px #4d83ffdd;
+      outline: none;
+    }
+    .result {
+      margin-top: 36px;
+      font-size: 1.5rem;
+      font-weight: 600;
+      min-height: 80px;
+      color: #9ec9ffdd;
+      text-shadow: 0 0 16px #7db0ffdd;
+      white-space: pre-wrap;
+      user-select: text;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 480px) {
+      .glass-container {
+        width: 90vw;
+        padding: 36px 28px 44px;
+      }
+      h1 {
+        font-size: 2.2rem;
+        margin-bottom: 22px;
+      }
+      button.calc-btn {
+        font-size: 1.2rem;
+        padding: 14px 0;
+      }
+      .result {
+        font-size: 1.25rem;
+        margin-top: 32px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="background-canvas"></canvas>
+<canvas id="ripple-canvas"></canvas>
+
+<div class="glass-container" role="main" aria-label="Age Calculator">
+  <h1>Age Calculator</h1>
+  <label for="dob">Date of Birth (DD/MM/YYYY)</label>
+  <input type="date" id="dob" max="" aria-required="true" aria-describedby="dobHelp" />
+  <label for="tob">Time of Birth (Optional)</label>
+  <input type="time" id="tob" aria-describedby="tobHelp" />
+  <button class="calc-btn" id="calculateBtn" aria-live="polite">Calculate Age</button>
+  <div class="result" id="result" aria-live="polite" aria-atomic="true"></div>
+</div>
+
+<script>
+  // Set max date to today
+  const dobInput = document.getElementById('dob');
+  dobInput.max = new Date().toISOString().split('T')[0];
+
+  const calculateBtn = document.getElementById('calculateBtn');
+  const resultDiv = document.getElementById('result');
+
+  function calculateExactAge(birthDate, now) {
+    if (now < birthDate) {
+      return null; // future date not valid
+    }
+
+    let years = now.getFullYear() - birthDate.getFullYear();
+    let months = now.getMonth() - birthDate.getMonth();
+    let days = now.getDate() - birthDate.getDate();
+    let hours = now.getHours() - birthDate.getHours();
+    let minutes = now.getMinutes() - birthDate.getMinutes();
+    let seconds = now.getSeconds() - birthDate.getSeconds();
+
+    if (seconds < 0) {
+      seconds += 60;
+      minutes--;
+    }
+    if (minutes < 0) {
+      minutes += 60;
+      hours--;
+    }
+    if (hours < 0) {
+      hours += 24;
+      days--;
+    }
+    if (days < 0) {
+      const previousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+      days += previousMonth.getDate();
+      months--;
+    }
+    if (months < 0) {
+      months += 12;
+      years--;
+    }
+
+    return { years, months, days, hours, minutes, seconds };
+  }
+
+  let intervalId = null;
+
+  function updateAge() {
+    const dobValue = dobInput.value;
+    const tobValue = document.getElementById('tob').value || "00:00";
+
+    if (!dobValue) {
+      resultDiv.textContent = "Please enter your date of birth.";
+      return;
+    }
+
+    const [year, month, day] = dobValue.split('-').map(Number);
+    const [hour, minute] = tobValue.split(':').map(Number);
+
+    const birthDate = new Date(year, month - 1, day, hour, minute);
+    const now = new Date();
+
+    const age = calculateExactAge(birthDate, now);
+
+    if (!age) {
+      resultDiv.textContent = "Date of birth cannot be in the future.";
+      return;
+    }
+
+    resultDiv.textContent = `You are ${age.years} year${age.years !== 1 ? 's' : ''}, ` +
+      `${age.months} month${age.months !== 1 ? 's' : ''}, ` +
+      `${age.days} day${age.days !== 1 ? 's' : ''}, ` +
+      `${age.hours} hour${age.hours !== 1 ? 's' : ''}, ` +
+      `${age.minutes} minute${age.minutes !== 1 ? 's' : ''}, and ` +
+      `${age.seconds} second${age.seconds !== 1 ? 's' : ''} old.`;
+  }
+
+  calculateBtn.addEventListener('click', () => {
+    updateAge();
+    if (intervalId) clearInterval(intervalId);
+    intervalId = setInterval(updateAge, 1000);
+  });
+
+  // Clear time input on load
+  document.getElementById('tob').value = "";
+
+</script>
+
+<script>
+  // Background 3D-like glowing nodes and connecting lines - Jarvis style
+
+  (() => {
+    const canvas = document.getElementById('background-canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height, nodes;
+
+    const config = {
+      nodeCount: 60,
+      maxDistance: 140,
+      nodeRadius: 4,
+      speed: 0.5,
+      lineColor: 'rgba(90, 180, 255, 0.35)',
+      nodeColor: 'rgba(90, 180, 255, 0.85)',
+    };
+
+    class Node {
+      constructor() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.z = Math.random() * 100 - 50; // -50 to 50 for 3D effect
+        this.vx = (Math.random() - 0.5) * config.speed;
+        this.vy = (Math.random() - 0.5) * config.speed;
+        this.vz = (Math.random() - 0.5) * 0.2;
+        this.radius = config.nodeRadius;
+      }
+
+      move() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.z += this.vz;
+
+        if (this.x < 0 || this.x > width) this.vx *= -1;
+        if (this.y < 0 || this.y > height) this.vy *= -1;
+        if (this.z < -50 || this.z > 50) this.vz *= -1;
+      }
+
+      draw() {
+        const size = this.radius + (this.z / 50) * 2;
+        const alpha = 0.5 + (this.z + 50) / 100 * 0.5;
+
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(90, 180, 255, ${alpha})`;
+        ctx.shadowColor = '#5ab4ffcc';
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    function connectNodes() {
+      for(let i=0; i<nodes.length; i++) {
+        for(let j=i+1; j<nodes.length; j++) {
+          const a = nodes[i];
+          const b = nodes[j];
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const dz = a.z - b.z;
+          const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+          if(dist < config.maxDistance) {
+            const alpha = 1 - dist / config.maxDistance;
+            ctx.beginPath();
+            ctx.strokeStyle = `rgba(90, 180, 255, ${alpha * 0.25})`;
+            ctx.lineWidth = 1.5;
+            ctx.shadowColor = '#5ab4ffcc';
+            ctx.shadowBlur = 16;
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+          }
+        }
+      }
+    }
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * devicePixelRatio;
+      canvas.height = height * devicePixelRatio;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+      nodes.forEach(node => {
+        node.move();
+        node.draw();
+      });
+      connectNodes();
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize', () => {
+      resize();
+      nodes = [];
+      for (let i = 0; i < config.nodeCount; i++) {
+        nodes.push(new Node());
+      }
+    });
+
+    function init() {
+      resize();
+      nodes = [];
+      for (let i = 0; i < config.nodeCount; i++) {
+        nodes.push(new Node());
+      }
+      animate();
+    }
+    init();
+
+  })();
+</script>
+
+<script>
+  // Ripple water effect behind glass container
+  (() => {
+    const canvas = document.getElementById('ripple-canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height, centerX, centerY, radius;
+
+    const rippleCount = 4;
+    const ripples = [];
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * devicePixelRatio;
+      canvas.height = height * devicePixelRatio;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+
+      centerX = width / 2;
+      centerY = height / 2;
+      radius = 160;
+    }
+
+    class Ripple {
+      constructor(offset) {
+        this.offset = offset; // phase offset for animation
+      }
+      draw(time) {
+        const progress = ((time / 1000) + this.offset) % 1;
+        const waveRadius = radius * (0.6 + 0.4 * progress);
+        const alpha = 0.3 * (1 - progress);
+
+        const waveCount = 6;
+        const waveAmplitude = 6;
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.strokeStyle = `rgba(100, 170, 255, ${alpha.toFixed(3)})`;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(100, 170, 255, 0.7)';
+        ctx.shadowBlur = 16;
+
+        ctx.beginPath();
+
+        // Draw a circular ripple with sinusoidal wave modulation
+        for(let i = 0; i <= 360; i++) {
+          const angle = i * Math.PI / 180;
+          // Water wave distortion in radius
+          const distortion = waveAmplitude * Math.sin(waveCount * angle + progress * 2 * Math.PI);
+          const r = waveRadius + distortion;
+          const x = r * Math.cos(angle);
+          const y = r * Math.sin(angle);
+
+          if(i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    function animate(time = 0) {
+      ctx.clearRect(0, 0, width, height);
+
+      // Draw translucent dark circle behind panel
+      ctx.save();
+      ctx.fillStyle = 'rgba(10, 20, 60, 0.2)';
+      ctx.shadowColor = '#4a90ff88';
+      ctx.shadowBlur = 40;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius + 20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      ripples.forEach(r => r.draw(time));
+      requestAnimationFrame(animate);
+    }
+
+    function init() {
+      resize();
+      ripples.length = 0;
+      for(let i = 0; i < rippleCount; i++) {
+        ripples.push(new Ripple(i / rippleCount));
+      }
+      animate();
+    }
+
+    window.addEventListener('resize', init);
+    init();
+
+  })();
+</script>
+
+</body>
+</html>
